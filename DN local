@@ -33,6 +33,10 @@ Animations = {
 
 ViewAnimations = {}
 
+if not Player:HasAppearanceLoaded() then 
+	Player.CharacterAppearanceLoaded:Wait()
+end
+
 ContextActionService:BindAction("customcamera", function(_, state, object)
 	if object.UserInputType == Enum.UserInputType.MouseMovement then
 		CameraX -= object.Delta.X

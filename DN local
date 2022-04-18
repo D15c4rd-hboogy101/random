@@ -113,4 +113,3 @@ Body.Head.Transparency = 1
 Body.Torso.Transparency = 1
 Body.RArm.Transparency = 1
 Body.LArm.Transparency = 1
-Animations.fist_idle:Play()

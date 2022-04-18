@@ -1,0 +1,116 @@
+Players = game:GetService("Players")
+ContextActionService = game:GetService("ContextActionService")
+UserInputService = game:GetService("UserInputService")
+RunService = game:GetService("RunService")
+ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+Player = Players.LocalPlayer
+Camera = workspace.CurrentCamera
+Character = Player.Character or Player.CharacterAdded:Wait()
+
+Humanoid = Character:WaitForChild("Humanoid")
+Root = Character:WaitForChild("HumanoidRootPart")
+Animator = Humanoid:WaitForChild("Animator")
+Character.Archivable = true; ViewModel = Character:Clone(); ViewModel.Parent = workspace; Character.Archivable = false
+ViewAnimator = ViewModel.Humanoid.Animator
+
+CameraX = 0
+CameraY = 0
+Locked = true
+
+Body = {
+	Head = Character.Head,
+	Torso = Character.Torso,
+	RArm = Character["Right Arm"],
+	LArm = Character["Left Arm"],
+	RLeg = Character["Right Leg"],
+	LLeg = Character["Left Leg"]
+}
+
+Animations = {
+	fist_idle = Animator:LoadAnimation(script.Animations.fist_idle)
+}
+
+ViewAnimations = {}
+
+ContextActionService:BindAction("customcamera", function(_, state, object)
+	if object.UserInputType == Enum.UserInputType.MouseMovement then
+		CameraX -= object.Delta.X
+		CameraY = math.clamp(CameraY - object.Delta.Y, -89, 89)
+	else
+		if state ~= Enum.UserInputState.Begin then return end
+		
+		Locked = not Locked
+	end
+end, false, Enum.UserInputType.MouseMovement, Enum.KeyCode.L)
+
+RunService.RenderStepped:Connect(function()
+	local camPos = CFrame.new(Body.Head.CFrame.p)
+	local camRot = CFrame.Angles(0, math.rad(CameraX), 0):ToWorldSpace(CFrame.Angles(math.rad(CameraY), 0, 0))
+	
+	UserInputService.MouseBehavior = Locked == true and Enum.MouseBehavior.LockCenter or Enum.MouseBehavior.Default
+	Camera.CameraType = "Scriptable"
+	Camera.CFrame = camPos * camRot
+	
+	ViewModel.Head.CFrame = Camera.CFrame
+end)
+
+Animator.AnimationPlayed:Connect(function(track)
+	if not ViewAnimations[track] then
+		ViewAnimations[track] = ViewAnimator:LoadAnimation(track.Animation)
+	end
+	
+	local ViewTrack = ViewAnimations[track]
+	
+	ViewTrack:Play()
+	
+	local RS_Event
+	RS_Event = RunService.RenderStepped:Connect(function()
+		ViewTrack.TimePosition = track.TimePosition
+		ViewTrack:AdjustWeight(track.WeightCurrent, 0)
+	end)
+	
+	if not track.IsPlaying then
+		ViewTrack:Stop()
+		
+		RS_Event:Disconnect()
+	end
+end)
+
+for _, obj in pairs(Character:GetChildren()) do
+	if obj:IsA("Accessory") then
+		obj.Handle.Transparency = 1
+	end
+end
+
+for _, obj in pairs(ViewModel:GetChildren()) do
+	if not (obj:IsA("BasePart") or obj:IsA("CharacterMesh") or obj.Name == "Humanoid" or obj.Name == "Shirt" or obj.Name == "Pants" or obj.Name == "Body Colors") then
+		obj:Destroy()
+	end
+	
+	if obj:IsA("BasePart") then
+		local RS_Event
+		RS_Event = RunService.Stepped:Connect(function()
+			obj.CanCollide = false
+			obj.CanTouch = false
+			obj.CanQuery = false
+		end)
+		
+		obj.Destroying:Connect(function()
+			RS_Event:Disconnect()
+		end)
+		
+		obj.Anchored = obj.Name == "Head"
+	end
+end
+
+ViewModel["Left Leg"]:Destroy()
+ViewModel["Right Leg"]:Destroy()
+ViewModel.Torso.Transparency = 1
+ViewModel.Head.Transparency = 1
+
+Body.Head.Transparency = 1
+Body.Torso.Transparency = 1
+Body.RArm.Transparency = 1
+Body.LArm.Transparency = 1
+Animations.fist_idle:Play()
